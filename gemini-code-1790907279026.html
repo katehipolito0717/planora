@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planora Pro — Executive Workspace</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<style>
+:root {
+  --bg: #0b0f19;
+  --surface: #131b2e;
+  --surface-hover: #1c2742;
+  --border: #23304d;
+  --text: #f0f4fc;
+  --muted: #8a99b5;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --accent: #06b6d4;
+  --danger: #f43f5e;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+  --radius: 16px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: fixed; inset: 0 auto 0 0; z-index: 20; }
+.brand { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+.brand span { color: var(--primary); }
+.nav button { width: 100%; border: 0; background: transparent; color: var(--muted); padding: 12px 14px; border-radius: 10px; text-align: left; font-weight: 600; margin-bottom: 4px; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+.nav button:hover, .nav button.active { background: var(--surface-hover); color: var(--text); }
+.nav button.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+
+.main { margin-left: 260px; width: calc(100% - 260px); max-width: 1400px; padding: 32px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+.hello h1 { margin: 0; font-size: 28px; font-weight: 800; }
+.hello p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.live-clock { background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 12px; text-align: right; }
+.clock-time { font-size: 20px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; }
+.clock-date { font-size: 11px; color: var(--muted); }
+
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 10px; padding: 10px 16px; font-weight: 600; transition: 0.2s; }
+.btn:hover { background: var(--surface-hover); }
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-hover); }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.stat small { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.stat strong { display: block; font-size: 28px; margin: 6px 0 2px; }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); margin-bottom: 24px; }
+.head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+
+.calendar-tools { display: flex; align-items: center; gap: 10px; }
+.month-title { font-weight: 700; min-width: 150px; text-align: center; }
+.weekdays, .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.weekdays div { text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; padding: 6px; }
+.day { min-height: 110px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 4px; }
+.day:hover { border-color: var(--primary); background: var(--surface-hover); }
+.day.muted { opacity: 0.3; }
+.day.today { border: 2px solid var(--primary); background: rgba(99, 102, 241, 0.08); }
+.day .num { font-size: 13px; font-weight: 800; }
+
+.pill { padding: 4px 6px; border-radius: 6px; font-size: 10px; font-weight: 600; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill.task { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+.pill.reminder { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+
+.item { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.item:last-child { border: 0; }
+.item-row { display: flex; justify-content: space-between; gap: 12px; }
+.time-badge { background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; color: var(--accent); }
+
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 50; align-items: center; justify-content: center; padding: 20px; }
+.modal { width: min(520px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+.form { display: grid; gap: 14px; margin-top: 16px; }
+.field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+@media(max-width: 900px) {
+  .sidebar { width: 70px; } .sidebar .brand span, .nav button span { display: none; }
+  .main { margin-left: 70px; width: calc(100% - 70px); padding: 16px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Plan<span>ora</span></div>
+    <nav class="nav">
+      <button class="active" onclick="go('dashboard')">📅 <span>Dashboard</span></button>
+      <button onclick="openModal('event')">＋ <span>New Schedule</span></button>
+      <button onclick="openModal('task')">✓ <span>New Task</span></button>
+      <button onclick="openModal('reminder')">🔔 <span>New Reminder</span></button>
+    </nav>
+  </aside>
+
+  <main class="main" id="dashboard">
+    <header class="topbar">
+      <div class="hello">
+        <h1 id="greeting">Welcome Back</h1>
+        <p id="dateText"></p>
+      </div>
+      <div class="live-clock">
+        <div class="clock-time" id="liveTime">--:--:--</div>
+        <div class="clock-date" id="liveDate">---</div>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><small>Events</small><strong id="eventStat">0</strong></div>
+      <div class="stat"><small>Tasks</small><strong id="taskStat">0</strong></div>
+      <div class="stat"><small>Reminders</small><strong id="reminderStat">0</strong></div>
+      <div class="stat"><small>Notes</small><strong id="noteStat">0</strong></div>
+    </section>
+
+    <section class="card">
+      <div class="head">
+        <h2>Calendar Matrix</h2>
+        <div class="calendar-tools">
+          <button class="btn" onclick="changeMonth(-1)">←</button>
+          <span class="month-title" id="monthTitle"></span>
+          <button class="btn" onclick="changeMonth(1)">→</button>
+        </div>
+      </div>
+      <div class="weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+      <div class="calendar" id="calendarGrid"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Dynamic Action Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Create Entry</h2>
+    <div class="form">
+      <div class="field"><label>Title</label><input id="fTitle" placeholder="e.g. Project Strategy Session"></div>
+      <div class="row">
+        <div class="field"><label>Date From</label><input id="fDateStart" type="date"></div>
+        <div class="field"><label>Date To</label><input id="fDateEnd" type="date"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Time From</label><input id="fTimeStart" type="time"></div>
+        <div class="field"><label>Time To</label><input id="fTimeEnd" type="time"></div>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'planora_v2_dark';
+let store = JSON.parse(localStorage.getItem(KEY) || '{"events":[],"tasks":[],"reminders":[]}');
+let activeMonth = new Date();
+let currentMode = 'event';
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const formatKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  renderCalendar();
+  updateStats();
+}
+
+function updateClock() {
+  const now = new Date();
+  $('liveTime').textContent = now.toLocaleTimeString();
+  $('liveDate').textContent = now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });$('dateText').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function renderCalendar() {
+  const grid = $('calendarGrid'); grid.innerHTML = '';$('monthTitle').textContent = activeMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  
+  const firstDay = new Date(activeMonth.getFullYear(), activeMonth.getMonth(), 1).getDay();
+  const totalDays = new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) grid.appendChild(createCell('', true));
+  for (let d = 1; d <= totalDays; d++) {
+    const dateObj = new Date(activeMonth.getFullYear(), activeMonth.getMonth(), d);
+    grid.appendChild(createCell(dateObj, false));
+  }
+}
+
+function createCell(dateObj, muted) {
+  const cell = document.createElement('div');
+  cell.className = 'day' + (muted ? ' muted' : '');
+  if (!dateObj) return cell;
+
+  const key = formatKey(dateObj);
+  if (key === formatKey(new Date())) cell.classList.add('today');
+
+  cell.innerHTML = `<div class="num">${dateObj.getDate()}</div>`;
+
+  const matches = store.events.filter(x => key >= x.dateStart && key <= x.dateEnd);
+  matches.forEach(x => {
+    const p = document.createElement('div');
+    p.className = 'pill';
+    p.textContent = `${x.timeStart ? x.timeStart + ' ' : ''}${x.title}`;
+    cell.appendChild(p);
+  });
+
+  return cell;
+}
+
+function changeMonth(dir) {
+  activeMonth.setMonth(activeMonth.getMonth() + dir);
+  renderCalendar();
+}
+
+function openModal(mode) {
+  currentMode = mode;
+  $('modalTitle').textContent = `New ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+  $('fDateStart').value = formatKey(new Date());
+  $('fDateEnd').value = formatKey(new Date());$('overlay').style.display = 'flex';
+}
+
+function closeModal() { $('overlay').style.display = 'none'; }
+
+function saveEntry() {
+  const title = $('fTitle').value.trim();
+  if (!title) return alert('Title required');
+
+  const entry = {
+    id: Date.now().toString(),
+    title,
+    dateStart: $('fDateStart').value,
+    dateEnd: $('fDateEnd').value \vert{}\vert{}$('fDateStart').value,
+    timeStart: $('fTimeStart').value,
+    timeEnd: $('fTimeEnd').value
+  };
+
+  store.events.push(entry);
+  localStorage.setItem(KEY, JSON.stringify(store));
+  closeModal();
+  renderCalendar();
+  updateStats();
+}
+
+function updateStats() {
+  $('eventStat').textContent = store.events.length;
+}
+
+init();
+</script>
+</body>
+</html>
