@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planora — Schedule, Reminders & Notes</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#182033;--muted:#737d90;--line:#e5e9f0;--primary:#6258e8;--primary2:#7c72f3;--danger:#d94b59;--green:#20a779;--shadow:0 10px 28px rgba(24,32,51,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}
+.app{display:flex;min-height:100vh}.side{width:240px;background:#fff;border-right:1px solid var(--line);padding:24px 15px;position:sticky;top:0;height:100vh}.logo{font-weight:900;font-size:24px;padding:0 12px 27px}.logo i{font-style:normal;color:var(--primary)}
+.nav button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:12px;border-radius:10px;margin:3px 0;color:#657083;font-weight:700}.nav button.active,.nav button:hover{background:#efeeff;color:var(--primary)}
+.sidebox{position:absolute;bottom:20px;left:15px;right:15px;background:#f3f1ff;border-radius:14px;padding:14px;font-size:12px;color:#62687a}
+.main{width:100%;max-width:1500px;margin:auto;padding:28px 34px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.top h1{margin:0;font-size:29px}.top p{margin:6px 0;color:var(--muted)}.actions{display:flex;gap:8px}.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:750}.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:18px}.stat,.card{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow)}.stat{padding:17px}.stat small{color:var(--muted)}.stat strong{display:block;font-size:26px;margin:5px 0}
+.layout{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}.card{padding:19px}.card h2{font-size:17px;margin:0}.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.event,.task,.note{border-bottom:1px solid var(--line);padding:12px 0}.event{display:flex;gap:14px}.event:last-child,.task:last-child,.note:last-child{border:0}.time{width:58px;font-weight:800;font-size:13px}.event-title{font-weight:750}.meta{font-size:12px;color:var(--muted);margin-top:4px}.dot{display:inline-block;width:9px;height:9px;background:var(--primary);border-radius:50%;margin-right:7px}.dot.green{background:var(--green)}.dot.orange{background:#ef9c42}
+.task{display:flex;align-items:center;gap:10px}.task input{width:17px;height:17px;accent-color:var(--primary)}.task.done span{text-decoration:line-through;color:#a0a7b4}.tag{margin-left:auto;background:#f0f1f5;color:#687286;border-radius:7px;padding:4px 7px;font-size:11px}
+.note{position:relative}.note-title{font-weight:800}.note-preview{font-size:12px;color:var(--muted);margin-top:5px;white-space:pre-wrap;overflow:hidden;max-height:36px}.note-actions{position:absolute;right:0;top:11px}.icon{background:#f4f5f8;border:0;border-radius:7px;padding:5px;margin-left:4px}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.dn{text-align:center;font-size:11px;color:var(--muted);font-weight:800;padding:5px}.day{min-height:65px;border:1px solid #edf0f5;border-radius:8px;padding:6px;font-size:12px;background:#fafbfe}.day.today{border:2px solid var(--primary);background:#f2f0ff}.day.muted{color:#b3bac6}.mini{display:block;background:#e9e7ff;color:#564ddd;padding:3px;border-radius:4px;margin-top:5px;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(12,18,35,.45);align-items:center;justify-content:center;padding:18px;z-index:5}.modal{background:#fff;width:min(540px,100%);border-radius:18px;padding:22px}.modal h2{margin:0 0 16px}.form{display:grid;gap:11px}.form label{font-size:12px;font-weight:750;color:#596477}.form input,.form textarea,.form select{width:100%;border:1px solid #dce2eb;border-radius:9px;padding:10px 11px;margin-top:5px;outline:0}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.toast{display:none;position:fixed;right:20px;bottom:20px;background:#182033;color:#fff;padding:12px 16px;border-radius:10px;z-index:9}
+@media(max-width:950px){.side{width:75px}.logo{font-size:0}.logo i{font-size:23px}.nav button{font-size:0;text-align:center}.sidebox{display:none}.stats{grid-template-columns:1fr 1fr}.layout{grid-template-columns:1fr}}
+@media(max-width:600px){.side{display:none}.main{padding:17px}.top{align-items:flex-start}.actions .btn:first-child{display:none}.stats{gap:8px}.stat{padding:12px}.stat strong{font-size:21px}.row{grid-template-columns:1fr}.day{min-height:55px;padding:4px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+<div class="logo">Plan<i>ora</i></div>
+<nav class="nav">
+<button class="active">🏠 Dashboard</button>
+<button onclick="showToast('Calendar selected')">📅 Calendar</button>
+<button onclick="showToast('Tasks selected')">✓ Tasks</button>
+<button onclick="showToast('Reminders selected')">🔔 Reminders</button>
+<button onclick="showToast('Notes selected')">📝 Notes</button>
+<button onclick="showToast('Settings selected')">⚙ Settings</button>
+</nav>
+<div class="sidebox"><b>Your personal organizer</b><br>Schedule your day, remember important things, manage tasks, and keep notes in one place.</div>
+</aside>
+
+<main class="main">
+<div class="top">
+<div><h1>Good morning 👋</h1><p id="dateText"></p></div>
+<div class="actions"><button class="btn" onclick="openModal('note')">📝 New Note</button><button class="btn primary" onclick="openModal('event')">＋ Schedule</button></div>
+</div>
+
+<section class="stats">
+<div class="stat"><small>Today's events</small><strong id="eventCount">4</strong><span class="meta">Scheduled today</span></div>
+<div class="stat"><small>Pending tasks</small><strong id="pending">4</strong><span class="meta">Tasks remaining</span></div>
+<div class="stat"><small>Notes</small><strong id="noteCount">3</strong><span class="meta">Saved notes</span></div>
+<div class="stat"><small>Reminders</small><strong>3</strong><span class="meta">Coming up</span></div>
+</section>
+
+<div class="layout">
+<section class="card">
+<div class="head"><h2>Today's Schedule</h2><button class="btn" onclick="openModal('event')">Add</button></div>
+<div id="events">
+<div class="event"><div class="time">08:30</div><div><div class="event-title"><span class="dot"></span>Morning Planning</div><div class="meta">Personal • 30 min</div></div></div>
+<div class="event"><div class="time">10:00</div><div><div class="event-title"><span class="dot green"></span>Team Meeting</div><div class="meta">Work • Conference Room</div></div></div>
+<div class="event"><div class="time">13:00</div><div><div class="event-title"><span class="dot orange"></span>Lunch Break</div><div class="meta">Personal • 1 hour</div></div></div>
+<div class="event"><div class="time">15:30</div><div><div class="event-title"><span class="dot"></span>Project Review</div><div class="meta">Work • 45 min</div></div></div>
+</div>
+</section>
+
+<section class="card">
+<div class="head"><h2>🔔 Reminders</h2><button class="btn" onclick="openModal('reminder')">＋</button></div>
+<div id="reminders">
+<div class="task"><span>💧 Drink water</span><span class="tag">10:30</span></div>
+<div class="task"><span>📧 Check email</span><span class="tag">11:00</span></div>
+<div class="task"><span>📚 Review notes</span><span class="tag">16:00</span></div>
+</div>
+</section>
+
+<section class="card">
+<div class="head"><h2>📅 October 2026</h2><button class="btn" onclick="showToast('Calendar refreshed')">↻</button></div>
+<div class="calendar" id="calendar"></div>
+</section>
+
+<section class="card">
+<div class="head"><h2>✓ My Tasks</h2><button class="btn" onclick="openModal('task')">＋ Add</button></div>
+<div id="tasks">
+<label class="task"><input type="checkbox" onchange="toggleTask(this)"><span>Finish project presentation</span><span class="tag">Work</span></label>
+<label class="task"><input type="checkbox" onchange="toggleTask(this)"><span>Reply to important emails</span><span class="tag">Work</span></label>
+<label class="task"><input type="checkbox" checked onchange="toggleTask(this)"><span>Review weekly goals</span><span class="tag">Personal</span></label>
+<label class="task"><input type="checkbox" onchange="toggleTask(this)"><span>Prepare tomorrow's schedule</span><span class="tag">Personal</span></label>
+<label class="task"><input type="checkbox" onchange="toggleTask(this)"><span>Buy groceries</span><span class="tag">Errands</span></label>
+</div>
+</section>
+
+<section class="card">
+<div class="head"><h2>📝 Quick Notes</h2><button class="btn" onclick="openModal('note')">＋ New</button></div>
+<div id="notes">
+<div class="note"><div class="note-title">Project Ideas</div><div class="note-preview">Add a calendar view, recurring reminders, and a weekly overview.</div></div>
+<div class="note"><div class="note-title">Things to Remember</div><div class="note-preview">Call the team, organize files, and prepare tomorrow's priorities.</div></div>
+<div class="note"><div class="note-title">Shopping List</div><div class="note-preview">Notebook, pens, folders, snacks.</div></div>
+</div>
+</section>
+</div>
+</main>
+</div>
+
+<div class="modal-bg" id="modalBg">
+<div class="modal">
+<h2 id="modalTitle">New Note</h2>
+<div class="form">
+<label>Title<input id="title" placeholder="Give it a title"></label>
+<div id="eventFields" style="display:none"><div class="row"><label>Date<input id="date" type="date"></label><label>Time<input id="time" type="time"></label></div></div>
+<div id="noteFields"><label>Note<textarea id="body" rows="7" placeholder="Write your notes here..."></textarea></label></div>
+<div id="categoryField"><label>Category<select id="category"><option>Personal</option><option>Work</option><option>Study</option><option>Health</option><option>Ideas</option></select></label></div>
+</div>
+<div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveItem()">Save</button></div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let mode='note';
+const $=x=>document.getElementById(x);
+const now=new Date();
+$('dateText').textContent=now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+$('date').value=now.toISOString().slice(0,10);
+
+function openModal(type){
+ mode=type;$('modalBg').style.display='flex';
+ $('modalTitle').textContent=type==='event'?'Add Schedule':type==='task'?'Add Task':'New '+(type==='reminder'?'Reminder':'Note');
+ $('eventFields').style.display=type==='event'||type==='reminder'?'block':'none';
+ $('noteFields').style.display=type==='note'?'block':'none';
+ $('categoryField').style.display=type==='event'||type==='task'?'block':'none';
+ $('title').value='';$('body').value='';$('title').focus();
+}
+function closeModal(){$('modalBg').style.display='none'}
+$('modalBg').onclick=e=>{if(e.target.id==='modalBg')closeModal()}
+function saveItem(){
+ const title=$('title').value.trim()||'Untitled';
+ const cat=$('category').value;
+ if(mode==='note'){
+   const d=document.createElement('div');d.className='note';d.innerHTML=`<div class="note-title">${safe(title)}</div><div class="note-preview">${safe($('body').value||'No content')}</div>`;$('notes').prepend(d);
+   $('noteCount').textContent=+$('noteCount').textContent+1;toast('Note saved!');
+ }else if(mode==='event'){
+   const time=$('time').value||'09:00';const d=document.createElement('div');d.className='event';d.innerHTML=`<div class="time">${time}</div><div><div class="event-title"><span class="dot"></span>${safe(title)}</div><div class="meta">${cat} • Added just now</div></div>`;$('events').appendChild(d);$('eventCount').textContent=+$('eventCount').textContent+1;toast('Schedule added!');
+ }else if(mode==='task'){
+   const d=document.createElement('label');d.className='task';d.innerHTML=`<input type="checkbox" onchange="toggleTask(this)"><span>${safe(title)}</span><span class="tag">${cat}</span>`;$('tasks').appendChild(d);updatePending();toast('Task added!');
+ }else{
+   const d=document.createElement('div');d.className='task';d.innerHTML=`<span>🔔 ${safe(title)}</span><span class="tag">${$('time').value||'09:00'}</span>`;$('reminders').appendChild(d);toast('Reminder added!');
+ }
+ closeModal();
+}
+function toggleTask(c){c.parentElement.classList.toggle('done',c.checked);updatePending()}
+function updatePending(){const a=[...$('tasks').querySelectorAll('input')];$('pending').textContent=a.filter(x=>!x.checked).length}
+function safe(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2000)}
+function calendar(){
+ const c=$('calendar'),names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];names.forEach(n=>{let x=document.createElement('div');x.className='dn';x.textContent=n;c.appendChild(x)});
+ const first=new Date(2026,9,1).getDay(),days=31,prev=30;
+ for(let i=0;i<first;i++){let x=document.createElement('div');x.className='day muted';x.textContent=prev-first+i+1;c.appendChild(x)}
+ const events={2:'Planning',5:'Meeting',9:'Deadline',15:'Review',22:'Call',28:'Pay bills'};
+ for(let d=1;d<=days;d++){let x=document.createElement('div');x.className='day'+(d===2?' today':'');x.innerHTML='<b>'+d+'</b>';if(events[d])x.innerHTML+=`<span class="mini">${events[d]}</span>`;c.appendChild(x)}
+}
+calendar();updatePending();
+</script>
+</body>
+</html>
